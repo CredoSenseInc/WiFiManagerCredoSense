@@ -195,6 +195,8 @@
 #define WFM_NO_LABEL 0
 #define WFM_LABEL_DEFAULT 1
 
+
+
 class WiFiManagerParameter {
   public:
     /** 
@@ -209,7 +211,7 @@ class WiFiManagerParameter {
     WiFiManagerParameter(const char *id, const char *label, const char *defaultValue, int length, const char *custom, int labelPlacement);
     ~WiFiManagerParameter();
     // WiFiManagerParameter& operator=(const WiFiManagerParameter& rhs);
-
+    
     const char *getID() const;
     const char *getValue() const;
     const char *getLabel() const;
@@ -242,7 +244,11 @@ class WiFiManager
     WiFiManager();
     ~WiFiManager();
     void WiFiManagerInit();
+    void update_data_str(String str,String d_id);
 
+    static String s_data;
+    static String d_id;
+    String send_data();
     // auto connect to saved wifi, or custom, and start config portal on failures
     boolean       autoConnect();
     boolean       autoConnect(char const *apName, char const *apPassword = NULL);
@@ -655,6 +661,8 @@ class WiFiManager
     void          handleWifi(boolean scan);
     void          handleWifiSave();
     void          handleInfo();
+    void          handlelive();
+    void          handlesdata();
     void          handleReset();
     void          handleNotFound();
     void          handleExit();
