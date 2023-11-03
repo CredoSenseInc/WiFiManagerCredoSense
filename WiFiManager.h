@@ -195,6 +195,8 @@
 #define WFM_NO_LABEL 0
 #define WFM_LABEL_DEFAULT 1
 
+
+
 class WiFiManagerParameter {
   public:
     /** 
@@ -209,7 +211,7 @@ class WiFiManagerParameter {
     WiFiManagerParameter(const char *id, const char *label, const char *defaultValue, int length, const char *custom, int labelPlacement);
     ~WiFiManagerParameter();
     // WiFiManagerParameter& operator=(const WiFiManagerParameter& rhs);
-
+    
     const char *getID() const;
     const char *getValue() const;
     const char *getLabel() const;
@@ -235,16 +237,6 @@ class WiFiManagerParameter {
 };
 
 
-    // debugging
-    typedef enum {
-        WM_DEBUG_SILENT    = 0, // debug OFF but still compiled for runtime
-        WM_DEBUG_ERROR     = 1, // error only
-        WM_DEBUG_NOTIFY    = 2, // default stable,INFO
-        WM_DEBUG_VERBOSE   = 3, // move verbose info
-        WM_DEBUG_DEV       = 4, // development useful debugging info
-        WM_DEBUG_MAX       = 5  // MAX extra dev auditing, var dumps etc (MAX+1 will print timing,mem and frag info)
-    } wm_debuglevel_t;
-
 class WiFiManager
 {
   public:
@@ -252,7 +244,11 @@ class WiFiManager
     WiFiManager();
     ~WiFiManager();
     void WiFiManagerInit();
+    void update_data_str(String str,String d_id);
 
+    static String s_data;
+    static String d_id;
+    String send_data();
     // auto connect to saved wifi, or custom, and start config portal on failures
     boolean       autoConnect();
     boolean       autoConnect(char const *apName, char const *apPassword = NULL);
@@ -349,7 +345,6 @@ class WiFiManager
     // toggle debug output
     void          setDebugOutput(boolean debug);
     void          setDebugOutput(boolean debug, String prefix); // log line prefix, default "*wm:"
-    void          setDebugOutput(boolean debug, wm_debuglevel_t level ); // log line prefix, default "*wm:"
 
     //set min quality percentage to include in scan, defaults to 8% if not specified
     void          setMinimumSignalQuality(int quality = 8);
@@ -591,7 +586,7 @@ class WiFiManager
     boolean       _paramsInWifi           = true;  // show custom parameters on wifi page
     boolean       _showInfoErase          = true;  // info page erase button
     boolean       _showInfoUpdate         = true;  // info page update button
-    boolean       _showBack               = false; // show back button
+    boolean       _showBack               = true; // show back button
     boolean       _enableConfigPortal     = true;  // FOR autoconnect - start config portal if autoconnect failed
     boolean       _disableConfigPortal    = true;  // FOR autoconnect - stop config portal if cp wifi save
     String        _hostname               = "";    // hostname for esp8266 for dhcp, and or MDNS
@@ -618,9 +613,6 @@ class WiFiManager
     // but not limited to, we could run continuous background scans on various page hits, or xhr hits
     // which would be better coupled with asyncscan
     // atm preload is only done on root hit and startcp
-    // 
-    // preload scanning causes AP to delay showing for users, but also caches and lets the cp load faster once its open
-    //  my scan takes 7-10 seconds
     boolean       _preloadwifiscan        = true; // preload wifiscan if true
     unsigned int  _scancachetime          = 30000; // ms cache time for preload scans
     boolean       _asyncScan              = true; // perform wifi network scan async
@@ -668,6 +660,8 @@ private:
     void          handleWifi(boolean scan);
     void          handleWifiSave();
     void          handleInfo();
+    void          handlelive();
+    void          handlesdata();
     void          handleReset();
 
     void          handleExit();
@@ -775,17 +769,27 @@ private:
     int         _max_params;
     WiFiManagerParameter** _params    = NULL;
 
+    // debugging
+    typedef enum {
+        DEBUG_SILENT    = 0, // debug OFF but still compiled for runtime
+        DEBUG_ERROR     = 1, // error only
+        DEBUG_NOTIFY    = 2, // default stable,INFO
+        DEBUG_VERBOSE   = 3, // move verbose info
+        DEBUG_DEV       = 4, // development useful debugging info
+        DEBUG_MAX       = 5  // MAX extra dev auditing, var dumps etc (MAX+1 will print timing,mem and frag info)
+    } wm_debuglevel_t;
+
     boolean _debug  = true;
     String _debugPrefix = FPSTR(S_debugPrefix);
 
-    wm_debuglevel_t debugLvlShow = WM_DEBUG_VERBOSE; // at which level start showing [n] level tags
+    wm_debuglevel_t debugLvlShow = DEBUG_VERBOSE; // at which level start showing [n] level tags
 
     // build debuglevel support
     // @todo use DEBUG_ESP_x?
     
     // Set default debug level
     #ifndef WM_DEBUG_LEVEL
-    #define WM_DEBUG_LEVEL WM_DEBUG_NOTIFY
+    #define WM_DEBUG_LEVEL DEBUG_NOTIFY
     #endif
 
     // override debug level OFF
