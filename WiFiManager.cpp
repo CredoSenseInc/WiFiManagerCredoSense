@@ -2033,10 +2033,11 @@ void WiFiManager::handlelive() {
     </head>
     <body>
         <div class="topnav">
-            <h1>CSLC SENSOR READINGS</h1>
+            <h1>Live Data</h1>
             <h3>
             )=====";
-            const char MAIN_page_d_id[] PROGMEM = R"=====(
+
+const char MAIN_page_d_id[] PROGMEM = R"=====(
               </h3>
         </div>
         <div class="content">
@@ -2086,21 +2087,19 @@ function getData() {
 </html>
 )=====";
   String page=MAIN_page;
-  page += d_id;
+  page += device_name;
   page += MAIN_page_d_id;
   HTTPSend(page);
 }
 
-String WiFiManager::s_data="{\"temperature\":\"27.88\",\"humidity\":\"76.61\",\"pressure\":\"1003.90\"}";
-String WiFiManager::device_name="CS-SENSORS";
 
 String WiFiManager::send_data(){
   return String(s_data);
 }
 
-void WiFiManager::update_data_str(String str, String d_id){
+void WiFiManager::update_data_str(String str, String _model_d_id){
   s_data=str;
-  device_name = d_id;
+  device_name = _model_d_id;
 }
 
 

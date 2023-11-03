@@ -246,8 +246,6 @@ class WiFiManager
     void WiFiManagerInit();
     void update_data_str(String str,String d_id);
 
-    static String s_data;
-    static String d_id;
     String send_data();
     // auto connect to saved wifi, or custom, and start config portal on failures
     boolean       autoConnect();
@@ -599,6 +597,10 @@ class WiFiManager
     String        _title                  = FPSTR(S_brand); // app title -  default WiFiManager
     String        _productModel           = "";
     String        _productName            = "";
+    
+    // variables for live data
+    String        device_name             = "";
+    String        s_data                  = "";
 
     // internal options
     
