@@ -1500,6 +1500,8 @@ bool WiFiManager::WiFi_scanNetworks(bool force,bool async){
     }
 
     if(force){
+      WiFiMode_t currentMode = WiFi.getMode();
+      WiFi.mode(WIFI_AP);
       int8_t res;
       _startscan = millis();
       if(async && _asyncScan){
@@ -1520,6 +1522,7 @@ bool WiFiManager::WiFi_scanNetworks(bool force,bool async){
           #endif
           res = WiFi.scanNetworks(true);
         #endif
+        WiFi.mode(currentMode);
         return false;
       }
       else{
@@ -1548,6 +1551,7 @@ bool WiFiManager::WiFi_scanNetworks(bool force,bool async){
       #ifdef WM_DEBUG_LEVEL
       DEBUG_WM(WM_DEBUG_VERBOSE,F("WiFi Scan completed"), "in "+(String)(_lastscan - _startscan)+" ms");
       #endif
+      WiFi.mode(currentMode);
       return true;
     }
     else {
