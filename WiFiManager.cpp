@@ -1503,8 +1503,6 @@ bool WiFiManager::WiFi_scanNetworks(bool force,bool async){
       WiFiMode_t currentMode = WiFi.getMode();
       WiFi.mode(WIFI_AP);
       int8_t res;
-      WiFiMode_t currentMode = WiFi.getMode();
-      WiFi.mode(WIFI_AP);
       _startscan = millis();
       if(async && _asyncScan){
         #ifdef ESP8266
