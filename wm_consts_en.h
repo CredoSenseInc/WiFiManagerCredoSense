@@ -97,8 +97,8 @@ const char T_q[]                  PROGMEM = "{q}"; // @token q
 const char T_r[]                  PROGMEM = "{r}"; // @token r
 const char T_R[]                  PROGMEM = "{R}"; // @token R
 const char T_h[]                  PROGMEM = "{h}"; // @token h
-const char T_pn[]                  PROGMEM = "{pn}"; // @token pn
-const char T_pm[]                  PROGMEM = "{pm}"; // @token pm
+const char T_pn[]                 PROGMEM = "{pn}"; // @token pn
+const char T_pm[]                 PROGMEM = "{pm}"; // @token pm
 
 // http
 const char HTTP_HEAD_CL[]         PROGMEM = "Content-Length";
