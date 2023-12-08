@@ -611,9 +611,15 @@ class WiFiManager
     // but not limited to, we could run continuous background scans on various page hits, or xhr hits
     // which would be better coupled with asyncscan
     // atm preload is only done on root hit and startcp
-    boolean       _preloadwifiscan        = true; // preload wifiscan if true
+    // 
+    // preload scanning causes AP to delay showing for users, but also caches and lets the cp load faster once its open
+    //  my scan takes 7-10 seconds
+    public:
+    boolean       _preloadwifiscan        = false; // preload wifiscan if true
     unsigned int  _scancachetime          = 30000; // ms cache time for preload scans
-    boolean       _asyncScan              = true; // perform wifi network scan async
+    boolean       _asyncScan              = false; // perform wifi network scan async
+    
+    private:
 
     boolean       _autoforcerescan        = false;  // automatically force rescan if scan networks is 0, ignoring cache
     
@@ -751,8 +757,15 @@ class WiFiManager
     boolean       abort               = false;
     boolean       reset               = false;
     boolean       configPortalActive  = false;
+
+
+    // these are state flags for portal mode, we are either in webportal mode(STA) or configportal mode(AP)
+    // these are mutually exclusive as STA+AP mode is not supported due to channel restrictions and stability
+    // if we decide to support this, these checks will need to be replaced with something client aware to check if client origin is ap or web
+    // These state checks are critical and used for internal function checks
     boolean       webPortalActive     = false;
     boolean       portalTimeoutResult = false;
+
     boolean       portalAbortResult   = false;
     boolean       storeSTAmode        = true; // option store persistent STA mode in connectwifi 
     int           timer               = 0;    // timer for debug throttle for numclients, and portal timeout messages
