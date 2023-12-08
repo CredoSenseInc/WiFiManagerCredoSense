@@ -12,6 +12,7 @@
 
 #include "WiFiManager.h"
 
+
 #if defined(ESP8266) || defined(ESP32)
 
 #ifdef ESP32
@@ -220,6 +221,8 @@ void WiFiManager::WiFiManagerInit(){
   if(_debug && _debugLevel >= DEBUG_DEV) debugPlatformInfo();
   _max_params = WIFI_MANAGER_MAX_PARAMS;
 }
+
+
 
 // destructor
 WiFiManager::~WiFiManager() {
@@ -645,6 +648,8 @@ void WiFiManager::setupHTTPServer(){
   server->on(WM_G(R_wifinoscan), std::bind(&WiFiManager::handleWifi, this, false));
   server->on(WM_G(R_wifisave),   std::bind(&WiFiManager::handleWifiSave, this));
   server->on(WM_G(R_info),       std::bind(&WiFiManager::handleInfo, this));
+  server->on(WM_G(R_live),       std::bind(&WiFiManager::handlelive, this));
+  server->on(WM_G(R_sdata),       std::bind(&WiFiManager::handlesdata, this));
   server->on(WM_G(R_param),      std::bind(&WiFiManager::handleParam, this));
   server->on(WM_G(R_paramsave),  std::bind(&WiFiManager::handleParamSave, this));
   server->on(WM_G(R_restart),    std::bind(&WiFiManager::handleReset, this));
@@ -1968,6 +1973,150 @@ void WiFiManager::doParamSave(){
   }
    
 }
+
+void WiFiManager::handlelive() {
+  const char MAIN_page[] PROGMEM = R"=====(
+<!DOCTYPE html>
+<html>
+<style>
+        html {
+            font-family: Arial, Helvetica, sans-serif;
+            display: inline-block;
+            text-align: center;
+        }
+        h1 {
+            font-size: 1.8rem;
+            color: white;
+        }
+        .topnav {
+            overflow: hidden;
+            background-color: #00994C;
+        }
+        body {
+            margin: 0;
+        }
+        .content {
+            padding: 50px;
+        }
+        .card-grid {
+            max-width: 800px;
+            margin: 0 auto;
+            display: grid;
+            grid-gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+        .card {
+            background-color: white;
+            box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5);
+        }
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #034078
+        }
+        .button {
+            background-color: #00AFF0;
+            border: none;
+            color: white;
+            padding: 8px 40%;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+        .reading {
+            font-size: 1.2rem;
+            color: #1282A2;
+        }
+    </style>
+    <head>
+        <title>CS-Cloud</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" type="image/png" href="favicon.png">
+        <link rel="stylesheet" type="text/css" href="style.css">
+    </head>
+    <body>
+        <div class="topnav">
+            <h1>Live Data</h1>
+            <h3>
+            )=====";
+
+const char MAIN_page_d_id[] PROGMEM = R"=====(
+              </h3>
+        </div>
+        <div class="content">
+            <div class="card-grid">
+                <div class="card">
+                    <p class="card-title"><i class="fas fa-thermometer-threequarters" style="color:#059e8a;"></i> Temperature</p>
+                    <p class="reading"><span id="temperature"></span> &deg;C</p>
+                </div>
+                <div class="card">
+                    <p class="card-title"> Humidity</p>
+                    <p class="reading"><span id="humidity"></span> &percnt;</p>
+                </div>
+                <div class="card">
+                    <p class="card-title"> Pressure</p>
+                    <p class="reading"><span id="pressure"></span> mbar</p>
+                </div>
+            </div>
+            <br/><form action='/' method='get'><button class="button">Back</button></form>
+            
+        </div>
+        
+        <script>
+            setInterval(function() {
+  // Call a function repetatively with 2 Second interval
+  getData();
+}, 1000); //1000mSeconds update rate
+
+function getData() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+                var myObj = JSON.parse(this.responseText);
+                var keys = Object.keys(myObj);
+
+                for (var i = 0; i < keys.length; i++){
+                    var key = keys[i];
+                    document.getElementById(key).innerHTML = myObj[key];
+                }
+    }
+  };
+  xhttp.open("GET", "sdata", true);
+  xhttp.send();
+}
+          
+        </script>
+    </body>
+</html>
+)=====";
+  String page=MAIN_page;
+  page += device_name;
+  page += MAIN_page_d_id;
+  HTTPSend(page);
+}
+
+
+String WiFiManager::send_data(){
+  return String(s_data);
+}
+
+void WiFiManager::update_data_str(String str, String _model_d_id){
+  s_data=str;
+  device_name = _model_d_id;
+}
+
+
+
+void WiFiManager::handlesdata() {
+  
+  String page=s_data;
+  server->send(200, "text/plane", page);
+}
+
 
 /** 
  * HTTPD CALLBACK info page
