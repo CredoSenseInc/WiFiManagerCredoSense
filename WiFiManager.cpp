@@ -740,6 +740,9 @@ void WiFiManager::setupHTTPServer()
   server->on(WM_G(R_wifisave), std::bind(&WiFiManager::handleWifiSave, this));
   server->on(WM_G(R_info), std::bind(&WiFiManager::handleInfo, this));
   server->on(WM_G(R_live), std::bind(&WiFiManager::handlelive, this));
+  server->on(WM_G(R_storage), std::bind(&WiFiManager::handlestorage, this));
+  server->on(WM_G(R_fupload), std::bind(&WiFiManager::handleFUpload, this));
+  server->on(WM_G(R_up_now), HTTP_POST, std::bind(&WiFiManager::HTTPSendOk, this), std::bind(&WiFiManager::handleFileUpload, this));
   server->on(WM_G(R_sdata), std::bind(&WiFiManager::handlesdata, this));
   server->on(WM_G(R_param), std::bind(&WiFiManager::handleParam, this));
   server->on(WM_G(R_paramsave), std::bind(&WiFiManager::handleParamSave, this));
@@ -1476,6 +1479,11 @@ void WiFiManager::HTTPSend(const String &content)
   server->send(200, FPSTR(HTTP_HEAD_CT), content);
 }
 
+void WiFiManager::HTTPSendOk()
+{
+  server->send(200);
+}
+
 /**
  * HTTPD handler for page requests
  */
@@ -1702,9 +1710,6 @@ bool WiFiManager::WiFi_scanNetworks(bool force, bool async)
 
   if (force)
   {
-    // WiFiMode_t currentMode = WiFi.getMode();
-    // WiFi.mode(WIFI_AP);
-
     int8_t res;
     _startscan = millis();
     if (async && _asyncScan)
@@ -1726,9 +1731,6 @@ bool WiFiManager::WiFi_scanNetworks(bool force, bool async)
 #endif
       res = WiFi.scanNetworks(true);
 #endif
-
-      // WiFi.mode(currentMode);
-
       return false;
     }
     else
@@ -1762,9 +1764,6 @@ bool WiFiManager::WiFi_scanNetworks(bool force, bool async)
 #ifdef WM_DEBUG_LEVEL
     DEBUG_WM(WM_DEBUG_VERBOSE, F("WiFi Scan completed"), "in " + (String)(_lastscan - _startscan) + " ms");
 #endif
-
-    // WiFi.mode(currentMode);
-
     return true;
   }
   else
@@ -2263,6 +2262,337 @@ void WiFiManager::doParamSave()
   }
 }
 
+// Handles storage data access, delete and download from non-volatile storage
+void WiFiManager::handlestorage()
+{
+  Serial.println("Storage");
+  bool SD_present = true;
+  handleRequest();
+
+  if (SD_present)
+  {
+    // Action acordivoid SD_dir()ng to post, dowload or delete, by MC 2022
+    if (server->args() > 0) // Arguments were received, ignored if there are not arguments
+    {
+      // Serial.println(server->arg(0));
+
+      String Order = server->arg(0);
+      Serial.println(Order);
+
+      if (Order.indexOf("download_") >= 0)
+      {
+        Order.remove(0, 9);
+        SD_file_download(Order, true);
+      }
+
+      if ((server->arg(0)).indexOf("delete_") >= 0)
+      {
+        Order.remove(0, 7);
+        SD_file_delete(Order, true);
+      }
+
+      if ((server->arg(0)).indexOf("open_") >= 0)
+      {
+        Order.remove(0, 5);
+        // int lengthofString = Order.length() + 1;
+        // char charArrayPath[lengthofString];
+        // Order.toCharArray(charArrayPath, lengthofString);
+        SD_open_dir(Order, true);
+      }
+    }
+
+    String page = sendStorageheader();
+
+    File root = SD.open("/");
+    if (root)
+    {
+      page += FPSTR("<table align='center'>");
+      page += FPSTR("<tr><th>Name</th><th style='width:20%'>Type</th><th>Size</th><th>Action</th><th>Action</th></tr>");
+
+      page += printDirectory("/", 0);
+      page += FPSTR("</table>");
+
+      page += FPSTR("<br><form action='/' method='post'><button class='button button3' name='back' value=''>Back</button></form>");
+
+      page += FPSTR(HTTP_END);
+
+      HTTPSend(page);
+    }
+    else
+    {
+      page += FPSTR("<h3>No Files Found</h3>");
+
+      page += FPSTR("<br><form action='/' method='post'><button class='button button3' name='back' value=''>Back</button></form>");
+
+      page += FPSTR(HTTP_END);
+
+      HTTPSend(page);
+    }
+  }
+  else
+    ReportSDNotPresent();
+}
+
+// Prints the directory, it is called in void SD_dir()
+String WiFiManager::printDirectory(String dirname, uint8_t levels)
+{
+  String page;
+
+  File root = SD.open(dirname);
+
+  if (!root)
+  {
+    return page;
+  }
+  if (!root.isDirectory())
+  {
+    return page;
+  }
+  File file = root.openNextFile();
+
+  int i = 0;
+  while (file)
+  {
+    // if (page.length() > 1000)
+    // {
+    //   SendHTML_Content();
+    // }
+    if (file.isDirectory())
+    {
+      page += FPSTR("<tr><td>");
+      page += String(file.name());
+      page += FPSTR("</td><td>Dir</td><td></td>");
+      page += FPSTR("<td><form action='/storage' method='post'><button class='button button3' name='open' value='open_");
+      page += String(file.path());
+      page += FPSTR("'>Open</button></form></td>");
+      page += FPSTR("<td></td></tr>");
+      page += printDirectory(file.name(), levels - 1);
+    }
+    else
+    {
+      page += FPSTR("<tr><td>");
+      page += String(file.name());
+      page += FPSTR("</td><td>File</td><td>");
+      page += file_size(file.size());
+      page += FPSTR("</td>");
+      page += FPSTR("<td><form action='/storage' method='post'><button class='button button1' name='download' value='download_");
+      page += String(file.path());
+      page += FPSTR("'>Download</button></form></td>");
+      page += FPSTR("<td><form action='/storage' method='post'><button class='button button2' name='delete' value='delete_");
+      page += String(file.path());
+      page += FPSTR("'>Delete</button></form></td>");
+      page += FPSTR("</tr>");
+    }
+    file = root.openNextFile();
+    i++;
+  }
+  file.close();
+  return page;
+}
+
+// Download a file from the SD, it is called in void SD_dir()
+void WiFiManager::SD_file_download(String filename, bool SD_present)
+{
+  if (SD_present)
+  {
+    Serial.println(filename);
+    File download = SD.open("/" + filename);
+    if (download)
+    {
+      server->sendHeader("Content-Type", "text/text");
+      server->sendHeader("Content-Disposition", "attachment; filename=" + filename);
+      server->sendHeader("Connection", "close");
+      server->streamFile(download, "application/octet-stream");
+      download.close();
+    }
+    else
+      ReportFileNotPresent("download");
+  }
+  else
+    ReportSDNotPresent();
+}
+
+void WiFiManager::SD_open_dir(String filename, bool SD_present)
+{
+  SD.open(filename);
+  String page = sendStorageheader();
+  page += FPSTR("<table align='center'>");
+  page += FPSTR("<tr><th>Name</th><th style='width:20%'>Type</th><th>Size</th><th>Action</th><th>Action</th></tr>");
+
+  page += printDirectory(filename, 0);
+  page += FPSTR("</table>");
+
+  page += FPSTR("<br><form action='/storage' method='post'><button class='button button3' name='back' value=''>Back</button></form>");
+
+  page += FPSTR(HTTP_END);
+
+  HTTPSend(page);
+}
+
+// Delete a file from the SD, it is called in void SD_dir()
+// TODO: Add directory in this function
+void WiFiManager::SD_file_delete(String filename, bool SD_present)
+{
+  String page;
+  if (SD_present)
+  {
+    Serial.println(filename);
+    page = sendStorageheader();
+    File dataFile = SD.open("/" + filename, FILE_READ); // Now read data from SD Card
+    if (dataFile)
+    {
+      if (SD.remove("/" + filename))
+      {
+        // Serial.println(F("File deleted successfully"));
+        page += "<h3>File '" + filename + "' has been erased</h3>";
+        page += FPSTR("<a href='/'>[Back]</a><br><br>");
+      }
+      else
+      {
+        page += FPSTR("<h3>File was not deleted - error</h3>");
+        page += FPSTR("<a href='/'>[Back]</a><br><br>");
+      }
+    }
+    else
+      ReportFileNotPresent("delete");
+
+    page += FPSTR("<br><form action='/storage' method='post'><button class='button button3' name='back' value=''>Back</button></form>");
+    page += FPSTR(HTTP_END);
+
+    HTTPSend(page);
+    // SendHTML_Stop();
+  }
+  else
+    ReportSDNotPresent();
+}
+
+// Upload a file to the SD
+void WiFiManager::handleFUpload()
+{
+  String page = sendStorageheader();
+  page += FPSTR("<br><br><br><h3>Select File to Upload</h3>");
+  page += FPSTR("<FORM action='/up_now' method='post' enctype='multipart/form-data'>");
+  page += FPSTR("<input class='buttons' style='width:25%' type='file' name='up_now' id = 'up_now' value=''><br><br>");
+  page += FPSTR("<button class='button button3' style='width:25%' type='submit'>Upload File</button><br><br>");
+  page += FPSTR(HTTP_END);
+
+  HTTPSend(page);
+}
+
+// Handles the file upload a file to the SD
+File UploadFile;
+// Upload a new file to the Filing system
+void WiFiManager::handleFileUpload()
+{
+  HTTPUpload &uploadfile = server->upload(); // See https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer/srcv
+                                             // For further information on 'status' structure, there are other reasons such as a failed transfer that could be used
+  if (uploadfile.status == UPLOAD_FILE_START)
+  {
+    String filename = uploadfile.filename;
+    if (!filename.startsWith("/"))
+      filename = "/" + filename;
+    Serial.print("Upload File Name: ");
+    Serial.println(filename);
+    SD.remove(filename);                        // Remove a previous version, otherwise data is appended the file again
+    UploadFile = SD.open(filename, FILE_WRITE); // Open the file for writing in SD (create it, if doesn't exist)
+    filename = String();
+  }
+  else if (uploadfile.status == UPLOAD_FILE_WRITE)
+  {
+    if (UploadFile)
+      UploadFile.write(uploadfile.buf, uploadfile.currentSize); // Write the received bytes to the file
+  }
+  else if (uploadfile.status == UPLOAD_FILE_END)
+  {
+    if (UploadFile) // If the file was successfully created
+    {
+      UploadFile.close(); // Close the file again
+      Serial.print("Upload Size: ");
+      Serial.println(uploadfile.totalSize);
+
+      String page = sendStorageheader();
+      page += FPSTR("<br><br><br><h3>File was successfully uploaded</h3>");
+      page += FPSTR("<h2>Uploaded File Name: ");
+      page += uploadfile.filename + "</h2>";
+      page += FPSTR("<h2>File Size: ");
+      page += file_size(uploadfile.totalSize) + "</h2><br><br>";
+      page += FPSTR("<a href='/'>[Back]</a><br><br>");
+      page += FPSTR(HTTP_END);
+
+      HTTPSend(page);
+    }
+    else
+    {
+      ReportCouldNotCreateFile("upload");
+    }
+  }
+}
+
+// ReportSDNotPresent
+void WiFiManager::ReportSDNotPresent()
+{
+  String page = sendStorageheader();
+  page += FPSTR("<h3>No SD Card present</h3>");
+  page += FPSTR("<a href='/'>[Back]</a><br><br>");
+  page += FPSTR(HTTP_END);
+
+  HTTPSend(page);
+  // SendHTML_Stop();
+}
+
+// ReportFileNotPresent
+void WiFiManager::ReportFileNotPresent(String target)
+{
+  String page = sendStorageheader();
+  page += FPSTR("<h3>File does not exist</h3>");
+  page += FPSTR("<a href='/");
+  page += target + "'>[Back]</a><br><br>";
+  page += FPSTR(HTTP_END);
+
+  HTTPSend(page);
+  // SendHTML_Stop();
+}
+
+// ReportCouldNotCreateFile
+void WiFiManager::ReportCouldNotCreateFile(String target)
+{
+  String page = sendStorageheader();
+  page += FPSTR("<br><br><br><h3>Could Not Create Uploaded File (write-protected?)</h3>");
+  page += FPSTR("<a href='/");
+  page += target + "'>[Back]</a><br><br>";
+  page += FPSTR(HTTP_END);
+
+  HTTPSend(page);
+  // SendHTML_Stop();
+}
+
+// File size conversion
+String WiFiManager::file_size(int bytes)
+{
+  String fsize = "";
+  if (bytes < 1024)
+    fsize = String(bytes) + " B";
+  else if (bytes < (1024 * 1024))
+    fsize = String(bytes / 1024.0, 3) + " KB";
+  else if (bytes < (1024 * 1024 * 1024))
+    fsize = String(bytes / 1024.0 / 1024.0, 3) + " MB";
+  else
+    fsize = String(bytes / 1024.0 / 1024.0 / 1024.0, 3) + " GB";
+  return fsize;
+}
+
+String WiFiManager::sendStorageheader()
+{
+  server->sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  server->sendHeader("Pragma", "no-cache");
+  server->sendHeader("Expires", "-1");
+  server->setContentLength(CONTENT_LENGTH_UNKNOWN);
+  String page = FPSTR(STORAGE_HEAD); // @token titlewifi
+
+  return page;
+}
+
+// Handles live data funtion in captive portal
 void WiFiManager::handlelive()
 {
   const char MAIN_page[] PROGMEM = R"=====(
@@ -2270,17 +2600,20 @@ void WiFiManager::handlelive()
 <html>
 <style>
         html {
-            font-family: Arial, Helvetica, sans-serif;
-            display: inline-block;
+            margin-left: auto;
+  			    margin-right: auto;
+            font-family: verdana;
+            display: inline-block; max-width: 500px;
             text-align: center;
         }
         h1 {
-            font-size: 1.8rem;
+            font-size: 1.5em;
             color: white;
-        }
-        .topnav {
-            overflow: hidden;
-            background-color: #00994C;
+            display: block;
+            background-color: #228B22;
+            padding: 0.2em;
+            max-width:500px;
+            min-width: 200px;
         }
         body {
             margin: 0;
@@ -2289,41 +2622,34 @@ void WiFiManager::handlelive()
             padding: 50px;
         }
         .card-grid {
-            max-width: 800px;
+          vertical-align: middle;
+            max-width: 500px;
             margin: 0 auto;
             display: grid;
             grid-gap: 2rem;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 500px));
         }
         .card {
             background-color: white;
+            border-radius:.3rem;
             box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5);
         }
         .card-title {
             font-size: 1.2rem;
             font-weight: bold;
-            color: #034078
+            color: #228B22
         }
-        .button {
-            background-color: #00AFF0;
-            border: none;
-            color: white;
-            padding: 8px 40%;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 8px;
-        }
+        button,input[type='button'],input[type='submit']{margin-top: 20px; cursor:pointer; border-radius:.3rem; border:0;background-color:#228B22;color:#fff;line-height:2.4rem;font-size:1.2rem; max-width: 500px; min-width: 200px; width:100%}
+        button{transition: 0s opacity;transition-delay: 3s;transition-duration: 0s;cursor: pointer}
+        button.D{background-color:#dc3630}
+        button:active{opacity:50% !important;cursor:wait;transition-delay: 0s}
         .reading {
             font-size: 1.2rem;
-            color: #1282A2;
+            color: #4ea24e;
         }
     </style>
     <head>
-        <title>CS-Cloud</title>
+        <title>Live Data</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="icon" type="image/png" href="favicon.png">
         <link rel="stylesheet" type="text/css" href="style.css">
@@ -2352,7 +2678,7 @@ void WiFiManager::handlelive()
                     <p class="reading"><span id="pressure"></span> mbar</p>
                 </div>
             </div>
-            <br/><form action='/' method='get'><button class="button">Back</button></form>
+            <br/><form action='/' method='get'><button class="button">Back to Home</button></form>
             
         </div>
         

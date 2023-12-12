@@ -23,6 +23,7 @@ static const char _wifinoscan_token[] PROGMEM = "wifinoscan";
 static const char _info_token[] PROGMEM = "info";
 static const char _live_token[] PROGMEM = "live";
 static const char _sdata_token[] PROGMEM = "sdata";
+static const char _storage_token[] PROGMEM = "storage";
 static const char _param_token[] PROGMEM = "param";
 static const char _close_token[] PROGMEM = "close";
 static const char _restart_token[] PROGMEM = "restart";
@@ -37,6 +38,7 @@ static PGM_P _menutokens[] PROGMEM = {
     _info_token,
     _live_token,
     _sdata_token,
+    _storage_token,
     _param_token,
     _close_token,
     _restart_token,
@@ -54,6 +56,9 @@ const char R_wifisave[] PROGMEM = "/wifisave";
 const char R_info[] PROGMEM = "/info";
 const char R_live[] PROGMEM = "/live";
 const char R_sdata[] PROGMEM = "/sdata";
+const char R_storage[] PROGMEM = "/storage";
+const char R_fupload[] PROGMEM = "/fupload";
+const char R_up_now[] PROGMEM = "/up_now";
 const char R_param[] PROGMEM = "/param";
 const char R_paramsave[] PROGMEM = "/paramsave";
 const char R_restart[] PROGMEM = "/restart";
