@@ -83,7 +83,7 @@ const char HTTP_UPDATEBTN[] PROGMEM = "<br/><form action='/update' method='get'>
 const char HTTP_BACKBTN[] PROGMEM = "<br/><form action='/' method='get'><button>Back to home</button></form>";
 
 const char HTTP_STATUS_ON[] PROGMEM = "<div class='msg S'><strong>Connected</strong> to {v}<br/><em><small>with IP {i}</small></em></div>";
-const char HTTP_STATUS_OFF[] PROGMEM = "<div class='msg {c}'><strong>Not connected</strong> to {v}{r}</div>"; // {c=class} {v=ssid} {r=status_off}
+const char HTTP_STATUS_OFF[] PROGMEM = "<div class='msg D {c}'><strong>Not connected</strong> to {v}{r}</div>"; // {c=class} {v=ssid} {r=status_off}
 const char HTTP_STATUS_OFFPW[] PROGMEM = "<br/>Authentication failure";										  // STATION_WRONG_PASSWORD,  no eps32
 const char HTTP_STATUS_OFFNOAP[] PROGMEM = "<br/>AP not found";												  // WL_NO_SSID_AVAIL
 const char HTTP_STATUS_OFFFAIL[] PROGMEM = "<br/>Could not connect";										  // WL_CONNECT_FAILED
@@ -126,7 +126,7 @@ const char STORAGE_HEAD[] PROGMEM = "<!DOCTYPE html><html>"
 									"<li><a href='/storage'>Files</a></li>" // Menu bar with commands
 									"<li><a href='/fupload'>Upload</a></li>"
 									"</ul>";
-
+									
 const char HTTP_STYLE[] PROGMEM = "<style>"
 								  ".c,body{text-align:center;font-family:verdana}div,input,select{padding:5px;font-size:1em;margin:5px 0;box-sizing:border-box}"
 								  "input,button,select,.msg{border-radius:.3rem;width: 100%}input[type=radio],input[type=checkbox]{width:auto}"
