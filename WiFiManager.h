@@ -807,7 +807,7 @@ private:
     
     // Set default debug level
     #ifndef WM_DEBUG_LEVEL
-    #define WM_DEBUG_LEVEL WM_DEBUG_MAX
+    #define WM_DEBUG_LEVEL WM_DEBUG_NOTIFY
     #endif
 
     // override debug level OFF
