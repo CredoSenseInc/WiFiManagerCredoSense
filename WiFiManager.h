@@ -20,6 +20,7 @@
 #endif
 
 #include <vector>
+#include <SD.h>
 
 // #define WM_MDNS            // includes MDNS, also set MDNS with sethostname
 // #define WM_FIXERASECONFIG  // use erase flash fix
@@ -677,16 +678,33 @@ public:
 
 private:
     void HTTPSend(const String &content);
+    void HTTPSendOk();
     void handleRoot();
     void handleWifi(boolean scan);
     void handleWifiSave();
     void handleInfo();
     void handlelive();
+    void handlestorage();
+    void handleFUpload();
     void handlesdata();
     void handleReset();
 
     void handleExit();
     void handleClose();
+
+    // Storage functions
+    String printDirectory(String dirname, uint8_t levels);
+    // void SD_dir();
+    void SD_file_download(String filename, bool SD_present);
+    void SD_open_dir(String filename, bool SD_present);
+    void SD_file_delete(String filename, bool SD_present);
+    void ReportFileNotPresent(String target);
+    void ReportCouldNotCreateFile(String target);
+    String file_size(int bytes);
+    void ReportSDNotPresent();
+    String sendStorageheader();
+    void handleFileUpload();
+
     // void          handleErase();
     void handleErase(boolean opt);
     void handleParam();

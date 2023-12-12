@@ -48,6 +48,7 @@ const char *const HTTP_PORTAL_MENU[] PROGMEM = {
 	"<form action='/info'    method='get'><button>Info</button></form><br/>\n",						// MENU_INFO
 	"<form action='/live'    method='get'><button>Live Data</button></form><br/>\n",				// MENU_live
 	"<form action='/sdata'    method='get'><button>sdata</button></form><br/>\n",					// MENU_sdata
+	"<form action='/storage'    method='get'><button>Stored Data</button></button></form><br/>\n",	// MENU_storage
 	"<form action='/param'   method='get'><button>Setup</button></form><br/>\n",					// MENU_PARAM
 	"<form action='/close'   method='get'><button>Close</button></form><br/>\n",					// MENU_CLOSE
 	"<form action='/restart' method='get'><button>Restart</button></form><br/>\n",					// MENU_RESTART
@@ -88,6 +89,43 @@ const char HTTP_STATUS_OFFNOAP[] PROGMEM = "<br/>AP not found";												  // 
 const char HTTP_STATUS_OFFFAIL[] PROGMEM = "<br/>Could not connect";										  // WL_CONNECT_FAILED
 const char HTTP_STATUS_NONE[] PROGMEM = "<div class='msg'>No AP set</div>";
 const char HTTP_BR[] PROGMEM = "<br/>";
+
+const char STORAGE_HEAD[] PROGMEM = "<!DOCTYPE html><html>"
+									"<head>"
+									"<title>Storage Data</title>" // NOTE: 1em = 16px
+									"<meta name='viewport' content='user-scalable=yes,initial-scale=1.0,width=device-width'>"
+									"<style>" // From here style:
+									"body{max-width:500px;margin:0 auto;font-family:verdana;font-size:100%; text-align: center;}"
+									"ul{clear:left; float:right; list-style:none; margin:10px 0 10px 0;padding:0;position:relative;right:50%; text-align:center;font-size:1em;}"
+									"li{float:left; display: block; position:relative; left:50%;}"
+									"li a{color:white; display: block; background-color:#228B22; padding:0.44em 0.44em;text-decoration:none;font-size:100%;}"
+									"li a:hover{background-color:#68b768; font-size:100%; text-decoration: underline}"
+									"h1{margin-left: auto; margin-right: auto; color:white;display:block; border-radius:0em;font-size:1.5em;padding: 0.2em;background:#228B22; text-align: center; overflow: hidden; max-width:500px; min-width: 200px}"
+									"h2{margin-left: auto; margin-right: auto; color:blue;font-size:0.8em;}"
+									"h3{margin-left: auto; margin-right: auto; text-align: center; font-size:0.8em;}"
+									".button,input[type='button'],input[type='submit']{border: none;border-radius: 8px;color: white;padding: 6px 12px;text-align: center;font-size: 0.9em;transition-duration: 0.4s;cursor: pointer;}"
+									".button1{background-color:#228B22; color:#fff}"
+									".button1:hover{background-color:#68b768;}"
+									".button2{background-color:#db3c30; color:#fff}"
+									".button2:hover{background-color:#f5554a;}"
+									".button3{background-color:#737373; color:#fff}"
+									".button3:hover{background-color:#999999;}"
+									"table{font-family:verdana;font-size:0.9em;border-collapse:collapse;width:100%;}"
+									"th,td {border:0.06em solid #dddddd;text-align:center;padding:0.5em;border-bottom:0.06em solid #dddddd;}"
+									"tr:nth-child(odd) {background-color:#eeeeee;}"
+									".rcorners_n {border-radius:3rem;background:#228B22;padding:0.3em 0.3em;width:20%;color:white;font-size:75%;}"
+									".rcorners_m {border-radius:3rem;background:#228B22;padding:0.3em 0.3em;width:50%;color:white;font-size:75%;}"
+									".rcorners_w {border-radius:3rem;background:#228B22;padding:0.3em 0.3em;width:70%;color:white;font-size:75%;}"
+									".column{float:left;width:50%;height:45%;}"
+									".row:after{content:'';display:table;clear:both;}"
+									"*{box-sizing:border-box;}"
+									"a{font-size:75%;}"
+									"p{font-size:75%;}"
+									"</style></head><body><h1>Storage</h1>"
+									"<ul>"
+									"<li><a href='/storage'>Files</a></li>" // Menu bar with commands
+									"<li><a href='/fupload'>Upload</a></li>"
+									"</ul>";
 
 const char HTTP_STYLE[] PROGMEM = "<style>"
 								  ".c,body{text-align:center;font-family:verdana}div,input,select{padding:5px;font-size:1em;margin:5px 0;box-sizing:border-box}"
@@ -217,12 +255,12 @@ const char HTTP_INFO_stamac[] PROGMEM = "<dt>Station MAC</dt><dd>{1}</dd>";
 const char HTTP_INFO_conx[] PROGMEM = "<dt>Connected</dt><dd>{1}</dd>";
 const char HTTP_INFO_autoconx[] PROGMEM = "<dt>Autoconnect</dt><dd>{1}</dd>";
 
-const char HTTP_INFO_aboutver[] PROGMEM = "<dt>WiFiManager</dt><dd>{1}</dd>";
+const char HTTP_INFO_aboutver[] PROGMEM = "<dt>CredoSense Captive Portal</dt><dd>{1}</dd>";
 const char HTTP_INFO_aboutarduino[] PROGMEM = "<dt>Arduino</dt><dd>{1}</dd>";
 const char HTTP_INFO_aboutsdk[] PROGMEM = "<dt>ESP-SDK/IDF</dt><dd>{1}</dd>";
 const char HTTP_INFO_aboutdate[] PROGMEM = "<dt>Build date</dt><dd>{1}</dd>";
 
-const char S_brand[] PROGMEM = "WiFiManager";
+const char S_brand[] PROGMEM = "CredoSense";
 const char S_debugPrefix[] PROGMEM = "*wm:";
 const char S_y[] PROGMEM = "Yes";
 const char S_n[] PROGMEM = "No";
@@ -238,6 +276,8 @@ const char S_titlewifi[] PROGMEM = "Config WiFi";
 const char S_titleinfo[] PROGMEM = "Info";
 const char S_titlelive[] PROGMEM = "live";
 const char S_titlesdata[] PROGMEM = "sdata";
+const char S_titlestorage[] PROGMEM = "storage";
+const char S_titlefupload[] PROGMEM = "fupload";
 const char S_titleparam[] PROGMEM = "Setup";
 const char S_titleparamsaved[] PROGMEM = "Setup saved";
 const char S_titleexit[] PROGMEM = "Exit";
