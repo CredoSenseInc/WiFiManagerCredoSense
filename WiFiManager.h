@@ -637,6 +637,7 @@ public:
     
 protected:
 
+    boolean       _autoforcerescan        = false; 
     boolean _disableIpFields = false; // modify function of setShow_X_Fields(false), forces ip fields off instead of default show if set, eg. _staShowStaticFields=-1
 
     String _wificountry = ""; // country code, @todo define in strings lang
@@ -671,20 +672,8 @@ protected:
 
     // webserver handlers
 public:
-    void          handleNotFound();
-protected:
-    void          HTTPSend(const String &content);
-    void          handleRoot();
-    void          handleWifi(boolean scan);
-    void          handleWifiSave();
-    void          handleInfo();
-    void          handleReset();
-
-    void          handleExit();
-    void          handleClose();
     void handleNotFound();
-
-private:
+protected:
     void HTTPSend(const String &content);
     void HTTPSendOk();
     void handleRoot();
