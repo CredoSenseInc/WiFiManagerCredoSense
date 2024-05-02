@@ -51,10 +51,10 @@
 // #warning ESP32S3
 // #endif
 
-#if defined(ARDUINO_ESP32S3_DEV) || defined(CONFIG_IDF_TARGET_ESP32S3)
-#warning "WM_NOTEMP"
-#define WM_NOTEMP // disabled temp sensor, have to determine which chip we are on
-#endif
+// #if defined(ARDUINO_ESP32S3_DEV) || defined(CONFIG_IDF_TARGET_ESP32S3)
+// #warning "WM_NOTEMP"
+// #define WM_NOTEMP // disabled temp sensor, have to determine which chip we are on
+// #endif
 
 // #include "soc/efuse_reg.h" // include to add efuse chip rev to info, getChipRevision() is almost always the same though, so not sure why it matters.
 
@@ -223,15 +223,13 @@ public:
 protected:
     void init(const char *id, const char *label, const char *defaultValue, int length, const char *custom, int labelPlacement);
 
-private:
-    WiFiManagerParameter &operator=(const WiFiManagerParameter &);
+    WiFiManagerParameter& operator=(const WiFiManagerParameter&);
     const char *_id;
     const char *_label;
-    char *_value;
-    int _length;
-    int _labelPlacement;
-
-protected:
+    char       *_value;
+    int         _length;
+    int         _labelPlacement;
+  
     const char *_customHTML;
     friend class WiFiManager;
 };
@@ -514,7 +512,7 @@ public:
 
     std::unique_ptr<WM_WebServer> server;
 
-private:
+  protected:
     // vars
     std::vector<uint8_t> _menuIds;
     std::vector<const char *> _menuIdsParams = {"wifi", "param", "info", "exit"};
@@ -564,11 +562,11 @@ private:
     bool _apHidden = false;                    // store softap hidden value
     uint16_t _httpPort = 80;                   // port for webserver
     // uint8_t       _retryCount             = 0; // counter for retries, probably not needed if synchronous
-    uint8_t _connectRetries = 1;  // number of sta connect retries, force reconnect, wait loop (connectimeout) does not always work and first disconnect bails
-    bool _aggresiveReconn = true; // use an agrressive reconnect strategy, WILL delay conxs
-                                  // on some conn failure modes will add delays and many retries to work around esp and ap bugs, ie, anti de-auth protections
-                                  // https://github.com/tzapu/WiFiManager/issues/1067
-    bool _allowExit = true;       // allow exit in nonblocking, else user exit/abort calls will be ignored including cptimeout
+    uint8_t       _connectRetries         = 1; // number of sta connect retries, force reconnect, wait loop (connectimeout) does not always work and first disconnect bails
+    bool          _aggresiveReconn        = false; // use an agrressive reconnect strategy, WILL delay conxs
+                                                   // on some conn failure modes will add delays and many retries to work around esp and ap bugs, ie, anti de-auth protections
+                                                   // https://github.com/tzapu/WiFiManager/issues/1067
+    bool          _allowExit              = true; // allow exit in nonblocking, else user exit/abort calls will be ignored including cptimeout
 
 #ifdef ESP32
     wifi_event_id_t wm_event_id = 0;
@@ -633,12 +631,11 @@ private:
     // preload scanning causes AP to delay showing for users, but also caches and lets the cp load faster once its open
     //  my scan takes 7-10 seconds
 public:
-    boolean _preloadwifiscan = false;    // preload wifiscan if true
-    unsigned int _scancachetime = 30000; // ms cache time for preload scans
-    boolean _asyncScan = false;          // perform wifi network scan async
-
-private:
-    boolean _autoforcerescan = false; // automatically force rescan if scan networks is 0, ignoring cache
+    boolean       _preloadwifiscan        = false; // preload wifiscan if true
+    unsigned int  _scancachetime          = 30000; // ms cache time for preload scans
+    boolean       _asyncScan              = false; // perform wifi network scan async
+    
+protected:
 
     boolean _disableIpFields = false; // modify function of setShow_X_Fields(false), forces ip fields off instead of default show if set, eg. _staShowStaticFields=-1
 
@@ -674,6 +671,17 @@ private:
 
     // webserver handlers
 public:
+    void          handleNotFound();
+protected:
+    void          HTTPSend(const String &content);
+    void          handleRoot();
+    void          handleWifi(boolean scan);
+    void          handleWifiSave();
+    void          handleInfo();
+    void          handleReset();
+
+    void          handleExit();
+    void          handleClose();
     void handleNotFound();
 
 private:

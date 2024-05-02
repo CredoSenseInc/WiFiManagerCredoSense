@@ -324,7 +324,8 @@ boolean WiFiManager::autoConnect(char const *apName, char const *apPassword)
 	DEBUG_WM(F("AutoConnect"));
 #endif
 
-	// bool wifiIsSaved = getWiFiIsSaved();
+  // bool wifiIsSaved = getWiFiIsSaved();
+  bool wifiIsSaved = true; // workaround until I can check esp32 wifiisinit and has nvs
 
 #ifdef ESP32
 	setupHostname(true);
@@ -345,11 +346,11 @@ boolean WiFiManager::autoConnect(char const *apName, char const *apPassword)
 	}
 #endif
 
-	// check if wifi is saved, (has autoconnect) to speed up cp start
-	// NOT wifi init safe
-	// if(wifiIsSaved){
-	_startconn = millis();
-	_begin();
+  // check if wifi is saved, (has autoconnect) to speed up cp start
+  // NOT wifi init safe
+  if(wifiIsSaved){
+     _startconn = millis();
+    _begin();
 
 	// attempt to connect using saved settings, on fail fallback to AP config portal
 	if (!WiFi.enableSTA(true))
@@ -417,15 +418,15 @@ boolean WiFiManager::autoConnect(char const *apName, char const *apPassword)
 		return true; // connected success
 	}
 
-#ifdef WM_DEBUG_LEVEL
-	DEBUG_WM(F("AutoConnect: FAILED for "), (String)((millis() - _startconn)) + " ms");
-#endif
-	// }
-	// else {
-	// #ifdef WM_DEBUG_LEVEL
-	// DEBUG_WM(F("No Credentials are Saved, skipping connect"));
-	// #endif
-	// }
+    #ifdef WM_DEBUG_LEVEL
+    DEBUG_WM(F("AutoConnect: FAILED for "),(String)((millis()-_startconn)) + " ms");
+    #endif
+  }
+  else {
+    #ifdef WM_DEBUG_LEVEL
+    DEBUG_WM(F("No Credentials are Saved, skipping connect"));
+    #endif
+  }
 
 	// possibly skip the config portal
 	if (!_enableConfigPortal)
@@ -3327,54 +3328,50 @@ void WiFiManager::handleClose()
 	HTTPSend(page);
 }
 
-void WiFiManager::reportStatus(String &page)
-{
-	// updateConxResult(WiFi.status()); // @todo: this defeats the purpose of last result, update elsewhere or add logic here
-	DEBUG_WM(WM_DEBUG_DEV, F("[WIFI] reportStatus prev:"), getWLStatusString(_lastconxresult));
-	DEBUG_WM(WM_DEBUG_DEV, F("[WIFI] reportStatus current:"), getWLStatusString(WiFi.status()));
-	String str;
-	if (WiFi_SSID() != "")
-	{
-		if (WiFi.status() == WL_CONNECTED)
-		{
-			str = FPSTR(HTTP_STATUS_ON);
-			str.replace(FPSTR(T_i), WiFi.localIP().toString());
-			str.replace(FPSTR(T_v), htmlEntities(WiFi_SSID()));
-		}
-		else
-		{
-			str = FPSTR(HTTP_STATUS_OFF);
-			str.replace(FPSTR(T_v), htmlEntities(WiFi_SSID()));
-			if (_lastconxresult == WL_STATION_WRONG_PASSWORD)
-			{
-				// wrong password
-				str.replace(FPSTR(T_c), "D"); // class
-				str.replace(FPSTR(T_r), FPSTR(HTTP_STATUS_OFFPW));
-			}
-			else if (_lastconxresult == WL_NO_SSID_AVAIL)
-			{
-				// connect failed, or ap not found
-				str.replace(FPSTR(T_c), "D");
-				str.replace(FPSTR(T_r), FPSTR(HTTP_STATUS_OFFNOAP));
-			}
-			else if (_lastconxresult == WL_CONNECT_FAILED)
-			{
-				// connect failed
-				str.replace(FPSTR(T_c), "D");
-				str.replace(FPSTR(T_r), FPSTR(HTTP_STATUS_OFFFAIL));
-			}
-			else
-			{
-				str.replace(FPSTR(T_c), "");
-				str.replace(FPSTR(T_r), "");
-			}
-		}
-	}
-	else
-	{
-		str = FPSTR(HTTP_STATUS_NONE);
-	}
-	page += str;
+void WiFiManager::reportStatus(String &page){
+  // updateConxResult(WiFi.status()); // @todo: this defeats the purpose of last result, update elsewhere or add logic here
+  DEBUG_WM(WM_DEBUG_DEV,F("[WIFI] reportStatus prev:"),getWLStatusString(_lastconxresult));
+  DEBUG_WM(WM_DEBUG_DEV,F("[WIFI] reportStatus current:"),getWLStatusString(WiFi.status()));
+  String str;
+  if (WiFi_SSID() != ""){
+    if (WiFi.status()==WL_CONNECTED){
+      str = FPSTR(HTTP_STATUS_ON);
+      str.replace(FPSTR(T_i),WiFi.localIP().toString());
+      str.replace(FPSTR(T_v),htmlEntities(WiFi_SSID()));
+    }
+    else {
+      str = FPSTR(HTTP_STATUS_OFF);
+      str.replace(FPSTR(T_v),htmlEntities(WiFi_SSID()));
+      if(_lastconxresult == WL_STATION_WRONG_PASSWORD){
+        // wrong password
+        str.replace(FPSTR(T_c),"D"); // class
+        str.replace(FPSTR(T_r),FPSTR(HTTP_STATUS_OFFPW));
+      }
+      else if(_lastconxresult == WL_NO_SSID_AVAIL){
+        // connect failed, or ap not found
+        str.replace(FPSTR(T_c),"D");
+        str.replace(FPSTR(T_r),FPSTR(HTTP_STATUS_OFFNOAP));
+      }
+      else if(_lastconxresult == WL_CONNECT_FAILED){
+        // connect failed
+        str.replace(FPSTR(T_c),"D");
+        str.replace(FPSTR(T_r),FPSTR(HTTP_STATUS_OFFFAIL));
+      }
+      else if(_lastconxresult == WL_CONNECTION_LOST){
+        // connect failed, MOST likely 4WAY_HANDSHAKE_TIMEOUT/incorrect password, state is ambiguous however
+        str.replace(FPSTR(T_c),"D");
+        str.replace(FPSTR(T_r),FPSTR(HTTP_STATUS_OFFFAIL));
+      }
+      else{
+        str.replace(FPSTR(T_c),"");
+        str.replace(FPSTR(T_r),"");
+      } 
+    }
+  }
+  else {
+    str = FPSTR(HTTP_STATUS_NONE);
+  }
+  page += str;
 }
 
 // PUBLIC
@@ -4291,30 +4288,29 @@ void WiFiManager::DEBUG_WM(wm_debuglevel_t level, Generic text, Genericb textb)
 	if (!_debug || _debugLevel < level)
 		return;
 
-	if (_debugLevel > WM_DEBUG_MAX)
-	{
-#ifdef ESP8266
-// uint32_t free;
-// uint16_t max;
-// uint8_t frag;
-// ESP.getHeapStats(&free, &max, &frag);// @todo Does not exist in 2.3.0
-// _debugPort.printf("[MEM] free: %5d | max: %5d | frag: %3d%% \n", free, max, frag);
-#elif defined ESP32
-		// total_free_bytes;      ///<  Total free bytes in the heap. Equivalent to multi_free_heap_size().
-		// total_allocated_bytes; ///<  Total bytes allocated to data in the heap.
-		// largest_free_block;    ///<  Size of largest free block in the heap. This is the largest malloc-able size.
-		// minimum_free_bytes;    ///<  Lifetime minimum free heap size. Equivalent to multi_minimum_free_heap_size().
-		// allocated_blocks;      ///<  Number of (variable size) blocks allocated in the heap.
-		// free_blocks;           ///<  Number of (variable size) free blocks in the heap.
-		// total_blocks;          ///<  Total number of (variable size) blocks in the heap.
-		multi_heap_info_t info;
-		heap_caps_get_info(&info, MALLOC_CAP_INTERNAL);
-		uint32_t free = info.total_free_bytes;
-		uint16_t max = info.largest_free_block;
-		uint8_t frag = 100 - (max * 100) / free;
-		_debugPort.printf("[MEM] free: %5d | max: %5d | frag: %3d%% \n", free, max, frag);
-#endif
-	}
+  if(_debugLevel >= WM_DEBUG_MAX){
+    #ifdef ESP8266
+    // uint32_t free;
+    // uint16_t max;
+    // uint8_t frag;
+    // ESP.getHeapStats(&free, &max, &frag);// @todo Does not exist in 2.3.0
+    // _debugPort.printf("[MEM] free: %5d | max: %5d | frag: %3d%% \n", free, max, frag); 
+    #elif defined ESP32
+    // total_free_bytes;      ///<  Total free bytes in the heap. Equivalent to multi_free_heap_size().
+    // total_allocated_bytes; ///<  Total bytes allocated to data in the heap.
+    // largest_free_block;    ///<  Size of largest free block in the heap. This is the largest malloc-able size.
+    // minimum_free_bytes;    ///<  Lifetime minimum free heap size. Equivalent to multi_minimum_free_heap_size().
+    // allocated_blocks;      ///<  Number of (variable size) blocks allocated in the heap.
+    // free_blocks;           ///<  Number of (variable size) free blocks in the heap.
+    // total_blocks;          ///<  Total number of (variable size) blocks in the heap.
+    multi_heap_info_t info;
+    heap_caps_get_info(&info, MALLOC_CAP_INTERNAL);
+    uint32_t free = info.total_free_bytes;
+    uint16_t max  = info.largest_free_block;
+    uint8_t frag = 100 - (max * 100) / free;
+    _debugPort.printf("[MEM] free: %5lu | max: %5u | frag: %3u%% \n", free, max, frag);
+    #endif
+  }
 
 	_debugPort.print(_debugPrefix);
 	if (_debugLevel >= debugLvlShow)
@@ -4376,23 +4372,22 @@ void WiFiManager::debugSoftAPConfig()
  * @access public
  * @return {[type]} [description]
  */
-void WiFiManager::debugPlatformInfo()
-{
-#ifdef ESP8266
-	system_print_meminfo();
-#ifdef WM_DEBUG_LEVEL
-	DEBUG_WM(F("[SYS] getCoreVersion():         "), ESP.getCoreVersion());
-	DEBUG_WM(F("[SYS] system_get_sdk_version(): "), system_get_sdk_version());
-	DEBUG_WM(F("[SYS] system_get_boot_version():"), system_get_boot_version());
-	DEBUG_WM(F("[SYS] getFreeHeap():            "), (String)ESP.getFreeHeap());
-#endif
-#elif defined(ESP32)
-#ifdef WM_DEBUG_LEVEL
-	DEBUG_WM(F("[SYS] WM version: "), WM_VERSION_STR);
-	DEBUG_WM(F("[SYS] Arduino version: "), VER_ARDUINO_STR);
-	DEBUG_WM(F("[SYS] ESP SDK version: "), ESP.getSdkVersion());
-	DEBUG_WM(F("[SYS] Free heap:       "), ESP.getFreeHeap());
-#endif
+void WiFiManager::debugPlatformInfo(){
+  #ifdef ESP8266
+    system_print_meminfo();
+    #ifdef WM_DEBUG_LEVEL
+    DEBUG_WM(F("[SYS] getCoreVersion():         "),ESP.getCoreVersion());
+    DEBUG_WM(F("[SYS] system_get_sdk_version(): "),system_get_sdk_version());
+    DEBUG_WM(F("[SYS] system_get_boot_version():"),system_get_boot_version());
+    DEBUG_WM(F("[SYS] getFreeHeap():            "),(String)ESP.getFreeHeap());
+    #endif
+  #elif defined(ESP32)
+  #ifdef WM_DEBUG_LEVEL
+    DEBUG_WM(F("[SYS] WM version: "), String((__FlashStringHelper *)WM_VERSION_STR) +" D:"+String(_debugLevel));
+    DEBUG_WM(F("[SYS] Arduino version: "), VER_ARDUINO_STR);
+    DEBUG_WM(F("[SYS] ESP SDK version: "), ESP.getSdkVersion());
+    DEBUG_WM(F("[SYS] Free heap:       "), ESP.getFreeHeap());
+    #endif
 
 #ifdef WM_DEBUG_LEVEL
 	DEBUG_WM(F("[SYS] Chip ID:"), WIFI_getChipId());
@@ -4773,32 +4768,30 @@ String WiFiManager::WiFi_SSID(bool persistent) const
 	else
 		wifi_station_get_config(&conf);
 
-	char tmp[33]; // ssid can be up to 32chars, => plus null term
-	memcpy(tmp, conf.ssid, sizeof(conf.ssid));
-	tmp[32] = 0; // nullterm in case of 32 char ssid
-	return String(reinterpret_cast<char *>(tmp));
-
-#elif defined(ESP32)
-	if (persistent)
-	{
-		wifi_config_t conf;
-		esp_wifi_get_config(WIFI_IF_STA, &conf);
-		return String(reinterpret_cast<const char *>(conf.sta.ssid));
-	}
-	else
-	{
-		if (WiFiGenericClass::getMode() == WIFI_MODE_NULL)
-		{
-			return String();
-		}
-		wifi_ap_record_t info;
-		if (!esp_wifi_sta_get_ap_info(&info))
-		{
-			return String(reinterpret_cast<char *>(info.ssid));
-		}
-		return String();
-	}
-#endif
+    char tmp[33]; //ssid can be up to 32chars, => plus null term
+    memcpy(tmp, conf.ssid, sizeof(conf.ssid));
+    tmp[32] = 0; //nullterm in case of 32 char ssid
+    return String(reinterpret_cast<char*>(tmp));
+    
+    #elif defined(ESP32)
+    // bool res = WiFi.wifiLowLevelInit(true); // @todo fix for S3, not found
+    // wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    if(persistent){
+      wifi_config_t conf;
+      esp_wifi_get_config(WIFI_IF_STA, &conf);
+      return String(reinterpret_cast<const char*>(conf.sta.ssid));
+    }
+    else {
+      if(WiFiGenericClass::getMode() == WIFI_MODE_NULL){
+          return String();
+      }
+      wifi_ap_record_t info;
+      if(!esp_wifi_sta_get_ap_info(&info)) {
+          return String(reinterpret_cast<char*>(info.ssid));
+      }
+      return String();
+    }
+    #endif
 }
 
 String WiFiManager::WiFi_psk(bool persistent) const
@@ -4829,62 +4822,51 @@ String WiFiManager::WiFi_psk(bool persistent) const
 }
 
 #ifdef ESP32
-#ifdef WM_ARDUINOEVENTS
-void WiFiManager::WiFiEvent(WiFiEvent_t event, arduino_event_info_t info)
-{
-#else
-void WiFiManager::WiFiEvent(WiFiEvent_t event, system_event_info_t info)
-{
-#define wifi_sta_disconnected disconnected
-#define ARDUINO_EVENT_WIFI_STA_DISCONNECTED SYSTEM_EVENT_STA_DISCONNECTED
-#define ARDUINO_EVENT_WIFI_SCAN_DONE SYSTEM_EVENT_SCAN_DONE
-#endif
-	if (!_hasBegun)
-	{
-#ifdef WM_DEBUG_LEVEL
-		// DEBUG_WM(WM_DEBUG_VERBOSE,"[ERROR] WiFiEvent, not ready");
-#endif
-		// Serial.println(F("\n[EVENT] WiFiEvent logging (wm debug not available)"));
-		// Serial.print(F("[EVENT] ID: "));
-		// Serial.println(event);
-		return;
-	}
-#ifdef WM_DEBUG_LEVEL
-// DEBUG_WM(WM_DEBUG_VERBOSE,"[EVENT]",event);
-#endif
-	if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED)
-	{
-#ifdef WM_DEBUG_LEVEL
-		DEBUG_WM(WM_DEBUG_VERBOSE, F("[EVENT] WIFI_REASON: "), info.wifi_sta_disconnected.reason);
-#endif
-		if (info.wifi_sta_disconnected.reason == WIFI_REASON_AUTH_EXPIRE || info.wifi_sta_disconnected.reason == WIFI_REASON_AUTH_FAIL)
-		{
-			_lastconxresulttmp = 7; // hack in wrong password internally, sdk emit WIFI_REASON_AUTH_EXPIRE on some routers on auth_fail
-		}
-		else
-			_lastconxresulttmp = WiFi.status();
-#ifdef WM_DEBUG_LEVEL
-		if (info.wifi_sta_disconnected.reason == WIFI_REASON_NO_AP_FOUND)
-			DEBUG_WM(WM_DEBUG_VERBOSE, F("[EVENT] WIFI_REASON: NO_AP_FOUND"));
-		if (info.wifi_sta_disconnected.reason == WIFI_REASON_ASSOC_FAIL)
-		{
-			if (_aggresiveReconn)
-				_connectRetries += 4;
-			DEBUG_WM(WM_DEBUG_VERBOSE, F("[EVENT] WIFI_REASON: AUTH FAIL"));
-		}
-#endif
-#ifdef esp32autoreconnect
-#ifdef WM_DEBUG_LEVEL
-		DEBUG_WM(WM_DEBUG_VERBOSE, F("[Event] SYSTEM_EVENT_STA_DISCONNECTED, reconnecting"));
-#endif
-		WiFi.reconnect();
-#endif
-	}
-	else if (event == ARDUINO_EVENT_WIFI_SCAN_DONE && _asyncScan)
-	{
-		uint16_t scans = WiFi.scanComplete();
-		WiFi_scanComplete(scans);
-	}
+  #ifdef WM_ARDUINOEVENTS
+  void WiFiManager::WiFiEvent(WiFiEvent_t event,arduino_event_info_t info){
+  #else
+  void WiFiManager::WiFiEvent(WiFiEvent_t event,system_event_info_t info){
+    #define wifi_sta_disconnected disconnected
+    #define ARDUINO_EVENT_WIFI_STA_DISCONNECTED SYSTEM_EVENT_STA_DISCONNECTED
+    #define ARDUINO_EVENT_WIFI_SCAN_DONE SYSTEM_EVENT_SCAN_DONE
+  #endif
+    if(!_hasBegun){
+      #ifdef WM_DEBUG_LEVEL
+        // DEBUG_WM(WM_DEBUG_VERBOSE,"[ERROR] WiFiEvent, not ready");
+      #endif
+      // Serial.println(F("\n[EVENT] WiFiEvent logging (wm debug not available)"));
+      // Serial.print(F("[EVENT] ID: "));
+      // Serial.println(event);
+      return;
+    }
+    #ifdef WM_DEBUG_LEVEL
+    // DEBUG_WM(WM_DEBUG_VERBOSE,"[EVENT]",event);
+    #endif
+    if(event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED){
+    #ifdef WM_DEBUG_LEVEL
+      DEBUG_WM(WM_DEBUG_VERBOSE,F("[EVENT] WIFI_REASON: "),info.wifi_sta_disconnected.reason);
+      #endif
+      if(info.wifi_sta_disconnected.reason == WIFI_REASON_AUTH_EXPIRE || info.wifi_sta_disconnected.reason == WIFI_REASON_AUTH_FAIL){
+        _lastconxresulttmp = 7; // hack in wrong password internally, sdk emit WIFI_REASON_AUTH_EXPIRE on some routers on auth_fail
+      } else _lastconxresulttmp = WiFi.status();
+      #ifdef WM_DEBUG_LEVEL
+      if(info.wifi_sta_disconnected.reason == WIFI_REASON_NO_AP_FOUND) DEBUG_WM(WM_DEBUG_VERBOSE,F("[EVENT] WIFI_REASON: NO_AP_FOUND"));
+      if(info.wifi_sta_disconnected.reason == WIFI_REASON_ASSOC_FAIL){
+        if(_aggresiveReconn && _connectRetries<4) _connectRetries=4;
+        DEBUG_WM(WM_DEBUG_VERBOSE,F("[EVENT] WIFI_REASON: AUTH FAIL"));
+      }  
+      #endif
+      #ifdef esp32autoreconnect
+      #ifdef WM_DEBUG_LEVEL
+        DEBUG_WM(WM_DEBUG_VERBOSE,F("[Event] SYSTEM_EVENT_STA_DISCONNECTED, reconnecting"));
+        #endif
+        WiFi.reconnect();
+      #endif
+  }
+  else if(event == ARDUINO_EVENT_WIFI_SCAN_DONE && _asyncScan){
+    uint16_t scans = WiFi.scanComplete();
+    WiFi_scanComplete(scans);
+  }
 }
 #endif
 
